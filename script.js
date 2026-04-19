@@ -136,3 +136,7 @@ listEl.classList.toggle("list-mode");
 
 // 🚀 Inicial
 renderList();
+
+if (!window.Twitch) {
+  isBroadcaster = true;
+}

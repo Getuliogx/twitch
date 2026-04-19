@@ -1,3 +1,5 @@
+isBroadcaster = true;
+
 const API_KEY = "b095ccbbb185d27703d007ae0ded5f7d";
 
 let isBroadcaster = false;

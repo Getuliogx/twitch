@@ -1,13 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-let isBroadcaster = false;
-
-// força modo streamer fora da Twitch
-if (!window.Twitch) {
-  isBroadcaster = true;
-}
-
 const API_KEY = "b095ccbbb185d27703d007ae0ded5f7d";
+
+// 🔥 FORÇA MODO STREAMER (TESTE FORA DA TWITCH)
+let isBroadcaster = true;
 
 let data = {
   movies: [],
@@ -21,48 +17,15 @@ const resultsEl = document.getElementById("results");
 const searchInput = document.getElementById("searchInput");
 const categorySelect = document.getElementById("category");
 
-// proteção
-if (!listEl || !searchInput || !categorySelect) {
-  console.error("HTML não carregou corretamente");
+// segurança
+if (!listEl || !resultsEl || !searchInput || !categorySelect) {
+  console.error("Erro: HTML não carregou corretamente");
   return;
 }
 
-// Twitch safe
-if (window.Twitch && window.Twitch.ext) {
-
-  window.Twitch.ext.onAuthorized((auth) => {
-    isBroadcaster = auth.role === "broadcaster";
-  });
-
-  window.Twitch.ext.configuration.onChanged(() => {
-    const cfg = window.Twitch.ext.configuration.broadcaster;
-
-    if (cfg && cfg.content) {
-      data = JSON.parse(cfg.content);
-      renderList();
-    }
-  });
-}
-
-// salvar
-function saveData() {
-  if (!isBroadcaster || !window.Twitch) return;
-
-  window.Twitch.ext.configuration.set(
-    "broadcaster",
-    "1",
-    JSON.stringify(data)
-  );
-}
-
-// busca
+// 🔍 BUSCA
 searchInput.addEventListener("input", async () => {
   const query = searchInput.value;
-
-  if (!isBroadcaster) {
-    renderList(query);
-    return;
-  }
 
   if (query.length < 3) {
     resultsEl.innerHTML = "";
@@ -78,11 +41,11 @@ searchInput.addEventListener("input", async () => {
     renderResults(json.results);
 
   } catch (err) {
-    console.error(err);
+    console.error("Erro na busca:", err);
   }
 });
 
-// mostrar resultados
+// 🎬 MOSTRAR RESULTADOS
 function renderResults(items) {
   resultsEl.innerHTML = "";
 
@@ -102,7 +65,7 @@ function renderResults(items) {
   });
 }
 
-// adicionar
+// ➕ ADICIONAR ITEM
 function addItem(item) {
   const category = categorySelect.value;
 
@@ -111,11 +74,10 @@ function addItem(item) {
     poster: item.poster_path
   });
 
-  saveData();
   renderList();
 }
 
-// render lista
+// 📺 RENDER LISTA
 function renderList(filter = "") {
   const category = categorySelect.value;
 
@@ -136,7 +98,7 @@ function renderList(filter = "") {
     });
 }
 
-// botão layout
+// 🔄 BOTÃO LISTA / GRID
 document.getElementById("toggleView").onclick = () => {
   listEl.classList.toggle("list-mode");
 };

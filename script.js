@@ -1,6 +1,8 @@
+document.addEventListener("DOMContentLoaded", () => {
+
 let isBroadcaster = false;
 
-// ✅ Força modo streamer fora da Twitch (pra teste)
+// força modo streamer fora da Twitch
 if (!window.Twitch) {
   isBroadcaster = true;
 }
@@ -19,10 +21,14 @@ const resultsEl = document.getElementById("results");
 const searchInput = document.getElementById("searchInput");
 const categorySelect = document.getElementById("category");
 
-let currentView = "grid";
+// proteção
+if (!listEl || !searchInput || !categorySelect) {
+  console.error("HTML não carregou corretamente");
+  return;
+}
 
-// ✅ Só roda se estiver dentro da Twitch
-if (window.Twitch) {
+// Twitch safe
+if (window.Twitch && window.Twitch.ext) {
 
   window.Twitch.ext.onAuthorized((auth) => {
     isBroadcaster = auth.role === "broadcaster";
@@ -38,7 +44,7 @@ if (window.Twitch) {
   });
 }
 
-// 💾 Salva dados (só streamer)
+// salvar
 function saveData() {
   if (!isBroadcaster || !window.Twitch) return;
 
@@ -49,11 +55,10 @@ function saveData() {
   );
 }
 
-// 🔍 Busca
+// busca
 searchInput.addEventListener("input", async () => {
   const query = searchInput.value;
 
-  // 👀 Viewer só pesquisa na lista
   if (!isBroadcaster) {
     renderList(query);
     return;
@@ -73,14 +78,12 @@ searchInput.addEventListener("input", async () => {
     renderResults(json.results);
 
   } catch (err) {
-    console.error("Erro na busca:", err);
+    console.error(err);
   }
 });
 
-// 🎬 Mostrar resultados (só streamer)
+// mostrar resultados
 function renderResults(items) {
-  if (!isBroadcaster) return;
-
   resultsEl.innerHTML = "";
 
   items.forEach(item => {
@@ -99,10 +102,8 @@ function renderResults(items) {
   });
 }
 
-// ➕ Adicionar item
+// adicionar
 function addItem(item) {
-  if (!isBroadcaster) return;
-
   const category = categorySelect.value;
 
   data[category].push({
@@ -114,7 +115,7 @@ function addItem(item) {
   renderList();
 }
 
-// 📺 Render lista
+// render lista
 function renderList(filter = "") {
   const category = categorySelect.value;
 
@@ -135,11 +136,12 @@ function renderList(filter = "") {
     });
 }
 
-// 🔄 Alternar layout
+// botão layout
 document.getElementById("toggleView").onclick = () => {
-  currentView = currentView === "grid" ? "list" : "grid";
   listEl.classList.toggle("list-mode");
 };
 
-// 🚀 Inicial
+// iniciar
 renderList();
+
+});

@@ -1,54 +1,35 @@
 body {
-background: #0e0e10;
-color: white;
-font-family: Arial;
-}
-
-.top-bar {
-display: flex;
-gap: 5px;
-margin-bottom: 10px;
+  font-family: Arial;
+  background: #0e0e10;
+  color: white;
+  padding: 10px;
 }
 
 #results, #list {
-display: flex;
-flex-wrap: wrap;
-gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
 }
 
 .card {
-width: 100px;
-cursor: pointer;
+  background: #1f1f23;
+  padding: 5px;
+  border-radius: 8px;
+  text-align: center;
 }
 
-.card img {
-width: 100%;
-border-radius: 8px;
-}
-
-.list-mode .card {
-display: flex;
-width: 100%;
-gap: 10px;
-}
-
-.list-mode .card img {
-width: 60px;
+img {
+  width: 100%;
+  border-radius: 6px;
 }
 
 button {
-  width: 100%;
   margin-top: 5px;
   background: #9147ff;
-  color: white;
   border: none;
-  border-radius: 6px;
+  color: white;
   padding: 5px;
-  cursor: pointer;
-}
-
-button:hover {
-  background: #772ce8;
+  border-radius: 5px;
 }
 
 body {

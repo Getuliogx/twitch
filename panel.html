@@ -1,25 +1,32 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lista do Streamer</title>
   <script src="https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="viewer-page">
+  <div class="overlay"></div>
 
-<h2>Lista do Streamer</h2>
+  <main class="app">
+    <h1>Lista do Streamer</h1>
 
-<input type="text" id="searchInput" placeholder="Buscar...">
+    <div class="toolbar">
+      <input type="text" id="searchInput" placeholder="Buscar na lista...">
+      <select id="category">
+        <option value="movies">Filmes</option>
+        <option value="series">Séries</option>
+        <option value="anime">Animes</option>
+        <option value="favorites">Favoritos</option>
+      </select>
+    </div>
 
-<select id="category">
-  <option value="movies">Filmes</option>
-  <option value="series">Séries</option>
-  <option value="anime">Animes</option>
-</select>
+    <div id="statusMsg" class="status"></div>
+    <div id="list" class="grid"></div>
+  </main>
 
-<div id="results"></div>
-<div id="list"></div>
-
-<script src="script.js"></script>
+  <script src="panel.js"></script>
 </body>
 </html>

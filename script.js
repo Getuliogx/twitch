@@ -1,16 +1,11 @@
-document.addEventListener("DOMContentLoaded", () => {
-
 const API_KEY = "b095ccbbb185d27703d007ae0ded5f7d";
 
-// modo streamer (teste)
-let isBroadcaster = true;
+let isBroadcaster = false;
 
-// ✅ CARREGA DO LOCALSTORAGE
-let data = JSON.parse(localStorage.getItem("mediaList")) || {
+let data = {
   movies: [],
   series: [],
-  anime: [],
-  favorites: []
+  anime: []
 };
 
 const listEl = document.getElementById("list");
@@ -18,41 +13,58 @@ const resultsEl = document.getElementById("results");
 const searchInput = document.getElementById("searchInput");
 const categorySelect = document.getElementById("category");
 
-// segurança
-if (!listEl || !resultsEl || !searchInput || !categorySelect) {
-  console.error("Erro: HTML não carregou corretamente");
-  return;
-}
+// 🔐 autenticação Twitch
+window.Twitch.ext.onAuthorized((auth) => {
+  isBroadcaster = auth.role === "broadcaster";
+});
 
-// 💾 SALVAR
+// 📥 carregar dados
+window.Twitch.ext.configuration.onChanged(() => {
+  const cfg = window.Twitch.ext.configuration.broadcaster;
+
+  if (cfg && cfg.content) {
+    data = JSON.parse(cfg.content);
+    renderList();
+  }
+});
+
+// 💾 salvar (SÓ streamer)
 function saveData() {
-  localStorage.setItem("mediaList", JSON.stringify(data));
+  if (!isBroadcaster) return;
+
+  window.Twitch.ext.configuration.set(
+    "broadcaster",
+    "1",
+    JSON.stringify(data)
+  );
 }
 
-// 🔍 BUSCA
+// 🔍 busca
 searchInput.addEventListener("input", async () => {
   const query = searchInput.value;
+
+  if (!isBroadcaster) {
+    renderList(query);
+    return;
+  }
 
   if (query.length < 3) {
     resultsEl.innerHTML = "";
     return;
   }
 
-  try {
-    const res = await fetch(
-      `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${query}`
-    );
+  const res = await fetch(
+    `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${query}`
+  );
 
-    const json = await res.json();
-    renderResults(json.results);
-
-  } catch (err) {
-    console.error("Erro na busca:", err);
-  }
+  const json = await res.json();
+  renderResults(json.results);
 });
 
-// 🎬 RESULTADOS
+// 🎬 resultados (streamer)
 function renderResults(items) {
+  if (!isBroadcaster) return;
+
   resultsEl.innerHTML = "";
 
   items.forEach(item => {
@@ -72,8 +84,10 @@ function renderResults(items) {
   });
 }
 
-// ➕ ADICIONAR
+// ➕ adicionar
 function addItem(item) {
+  if (!isBroadcaster) return;
+
   const category = categorySelect.value;
 
   const exists = data[category].some(i => i.title === (item.title || item.name));
@@ -88,17 +102,18 @@ function addItem(item) {
   renderList();
 }
 
-// ❌ REMOVER
+// ❌ remover
 function removeItem(index) {
-  const category = categorySelect.value;
+  if (!isBroadcaster) return;
 
+  const category = categorySelect.value;
   data[category].splice(index, 1);
 
   saveData();
   renderList();
 }
 
-// 📺 LISTA
+// 📺 lista
 function renderList(filter = "") {
   const category = categorySelect.value;
 
@@ -107,32 +122,23 @@ function renderList(filter = "") {
   data[category]
     .filter(i => i.title.toLowerCase().includes(filter.toLowerCase()))
     .forEach((item, index) => {
+
       const div = document.createElement("div");
       div.className = "card";
 
       div.innerHTML = `
         <img src="https://image.tmdb.org/t/p/w200${item.poster}">
         <p>${item.title}</p>
-        <button>Remover</button>
+        ${isBroadcaster ? '<button>Remover</button>' : ''}
       `;
 
-      div.querySelector("button").onclick = () => removeItem(index);
+      if (isBroadcaster) {
+        div.querySelector("button").onclick = () => removeItem(index);
+      }
 
       listEl.appendChild(div);
     });
 }
 
-// 🔄 LISTA / GRID
-document.getElementById("toggleView").onclick = () => {
-  listEl.classList.toggle("list-mode");
-};
-
-// trocar categoria
-categorySelect.addEventListener("change", () => {
-  renderList();
-});
-
 // iniciar
 renderList();
-
-});

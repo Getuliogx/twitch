@@ -8,7 +8,6 @@ const DEFAULT_DATA = {
 };
 
 let data = JSON.parse(JSON.stringify(DEFAULT_DATA));
-let canEdit = false;
 
 const resultsEl = document.getElementById("results");
 const listEl = document.getElementById("list");
@@ -21,20 +20,30 @@ function setStatus(message) {
 }
 
 function saveData() {
-  if (!window.Twitch || !window.Twitch.ext || !canEdit) return;
+  if (!window.Twitch || !window.Twitch.ext) {
+    setStatus("Abra esta página dentro da Twitch.");
+    return;
+  }
 
-  window.Twitch.ext.configuration.set(
-    "broadcaster",
-    "1",
-    JSON.stringify(data)
-  );
-  setStatus("Lista salva.");
+  try {
+    window.Twitch.ext.configuration.set(
+      "broadcaster",
+      "1",
+      JSON.stringify(data)
+    );
+    setStatus("Lista salva.");
+  } catch (e) {
+    console.error(e);
+    setStatus("Erro ao salvar a lista.");
+  }
 }
 
 function renderResults(items) {
   resultsEl.innerHTML = "";
 
-  const filtered = (items || []).filter(item => item.poster_path && (item.title || item.name));
+  const filtered = (items || []).filter(
+    item => item.poster_path && (item.title || item.name)
+  );
 
   if (!filtered.length) {
     resultsEl.innerHTML = `<div class="empty">Nenhum resultado encontrado.</div>`;
@@ -62,11 +71,6 @@ function renderResults(items) {
 }
 
 function addItem(item) {
-  if (!canEdit) {
-    setStatus("Você não tem permissão para editar esta lista.");
-    return;
-  }
-
   const category = categorySelect.value;
   const exists = (data[category] || []).some(i => i.title === item.title);
 
@@ -81,11 +85,6 @@ function addItem(item) {
 }
 
 function removeItem(index) {
-  if (!canEdit) {
-    setStatus("Você não tem permissão para editar esta lista.");
-    return;
-  }
-
   const category = categorySelect.value;
   data[category].splice(index, 1);
   saveData();
@@ -109,13 +108,10 @@ function renderList() {
     div.innerHTML = `
       <img src="https://image.tmdb.org/t/p/w300${item.poster}" alt="">
       <p>${item.title}</p>
-      ${canEdit ? '<button type="button">Remover</button>' : ''}
+      <button type="button">Remover</button>
     `;
 
-    if (canEdit) {
-      div.querySelector("button").onclick = () => removeItem(index);
-    }
-
+    div.querySelector("button").onclick = () => removeItem(index);
     listEl.appendChild(div);
   });
 }
@@ -126,11 +122,6 @@ searchInput.addEventListener("input", async () => {
   if (query.length < 3) {
     resultsEl.innerHTML = "";
     setStatus("");
-    return;
-  }
-
-  if (!canEdit) {
-    setStatus("Esta tela não está com permissão de edição.");
     return;
   }
 
@@ -153,19 +144,6 @@ categorySelect.addEventListener("change", () => {
 });
 
 if (window.Twitch && window.Twitch.ext) {
-  window.Twitch.ext.onAuthorized((auth) => {
-    console.log("Auth recebido:", auth);
-
-    const role = auth && auth.role ? auth.role : "";
-    canEdit = role === "broadcaster" || role === "external";
-
-    if (!canEdit) {
-      setStatus(`Sem permissão de edição. Role atual: ${role || "desconhecido"}`);
-    } else {
-      setStatus("");
-    }
-  });
-
   window.Twitch.ext.configuration.onChanged(() => {
     const cfg = window.Twitch.ext.configuration.broadcaster;
 
@@ -181,6 +159,11 @@ if (window.Twitch && window.Twitch.ext) {
     }
 
     renderList();
+  });
+
+  window.Twitch.ext.onAuthorized((auth) => {
+    console.log("Auth recebido:", auth);
+    setStatus("");
   });
 } else {
   setStatus("Abra esta página dentro da Twitch.");

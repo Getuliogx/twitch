@@ -7,8 +7,8 @@ const DEFAULT_DATA = {
   favorites: []
 };
 
-let data = structuredClone(DEFAULT_DATA);
-let isBroadcaster = false;
+let data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+let canEdit = false;
 
 const resultsEl = document.getElementById("results");
 const listEl = document.getElementById("list");
@@ -17,11 +17,11 @@ const categorySelect = document.getElementById("category");
 const statusMsg = document.getElementById("statusMsg");
 
 function setStatus(message) {
-  statusMsg.textContent = message;
+  statusMsg.textContent = message || "";
 }
 
 function saveData() {
-  if (!window.Twitch || !window.Twitch.ext || !isBroadcaster) return;
+  if (!window.Twitch || !window.Twitch.ext || !canEdit) return;
 
   window.Twitch.ext.configuration.set(
     "broadcaster",
@@ -34,7 +34,7 @@ function saveData() {
 function renderResults(items) {
   resultsEl.innerHTML = "";
 
-  const filtered = items.filter(item => item.poster_path && (item.title || item.name));
+  const filtered = (items || []).filter(item => item.poster_path && (item.title || item.name));
 
   if (!filtered.length) {
     resultsEl.innerHTML = `<div class="empty">Nenhum resultado encontrado.</div>`;
@@ -62,6 +62,11 @@ function renderResults(items) {
 }
 
 function addItem(item) {
+  if (!canEdit) {
+    setStatus("Você não tem permissão para editar esta lista.");
+    return;
+  }
+
   const category = categorySelect.value;
   const exists = (data[category] || []).some(i => i.title === item.title);
 
@@ -76,6 +81,11 @@ function addItem(item) {
 }
 
 function removeItem(index) {
+  if (!canEdit) {
+    setStatus("Você não tem permissão para editar esta lista.");
+    return;
+  }
+
   const category = categorySelect.value;
   data[category].splice(index, 1);
   saveData();
@@ -99,10 +109,12 @@ function renderList() {
     div.innerHTML = `
       <img src="https://image.tmdb.org/t/p/w300${item.poster}" alt="">
       <p>${item.title}</p>
-      <button type="button">Remover</button>
+      ${canEdit ? '<button type="button">Remover</button>' : ''}
     `;
 
-    div.querySelector("button").onclick = () => removeItem(index);
+    if (canEdit) {
+      div.querySelector("button").onclick = () => removeItem(index);
+    }
 
     listEl.appendChild(div);
   });
@@ -113,11 +125,12 @@ searchInput.addEventListener("input", async () => {
 
   if (query.length < 3) {
     resultsEl.innerHTML = "";
+    setStatus("");
     return;
   }
 
-  if (!isBroadcaster) {
-    setStatus("Essa tela de configuração só funciona para o broadcaster.");
+  if (!canEdit) {
+    setStatus("Esta tela não está com permissão de edição.");
     return;
   }
 
@@ -129,7 +142,8 @@ searchInput.addEventListener("input", async () => {
     const json = await res.json();
     renderResults(json.results || []);
     setStatus("");
-  } catch {
+  } catch (error) {
+    console.error(error);
     setStatus("Erro ao buscar no TMDb.");
   }
 });
@@ -140,9 +154,15 @@ categorySelect.addEventListener("change", () => {
 
 if (window.Twitch && window.Twitch.ext) {
   window.Twitch.ext.onAuthorized((auth) => {
-    isBroadcaster = auth.role === "broadcaster";
-    if (!isBroadcaster) {
-      setStatus("Abra esta página pelo botão Configurar da extensão.");
+    console.log("Auth recebido:", auth);
+
+    const role = auth && auth.role ? auth.role : "";
+    canEdit = role === "broadcaster" || role === "external";
+
+    if (!canEdit) {
+      setStatus(`Sem permissão de edição. Role atual: ${role || "desconhecido"}`);
+    } else {
+      setStatus("");
     }
   });
 
@@ -152,17 +172,18 @@ if (window.Twitch && window.Twitch.ext) {
     if (cfg && cfg.content) {
       try {
         data = JSON.parse(cfg.content);
-      } catch {
-        data = structuredClone(DEFAULT_DATA);
+      } catch (e) {
+        console.error(e);
+        data = JSON.parse(JSON.stringify(DEFAULT_DATA));
       }
     } else {
-      data = structuredClone(DEFAULT_DATA);
+      data = JSON.parse(JSON.stringify(DEFAULT_DATA));
     }
 
     renderList();
   });
 } else {
-  setStatus("Abra esta página dentro da Twitch em Configurar.");
+  setStatus("Abra esta página dentro da Twitch.");
 }
 
 renderList();

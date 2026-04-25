@@ -8,26 +8,10 @@ html, body {
   min-height: 100%;
   font-family: Arial, sans-serif;
   color: #fff;
-}
-
-body {
-  background-image: url("https://raw.githubusercontent.com/Getuliogx/twitch/main/fundo.jpg");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-}
-
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  z-index: 0;
+  background: linear-gradient(180deg, #0e0e10 0%, #18181b 100%);
 }
 
 .app {
-  position: relative;
-  z-index: 1;
   padding: 16px;
 }
 
@@ -78,7 +62,7 @@ h2 {
 }
 
 .card {
-  background: rgba(20, 20, 24, 0.88);
+  background: #1f1f23;
   border-radius: 10px;
   padding: 8px;
   text-align: center;
@@ -111,15 +95,7 @@ h2 {
 }
 
 .empty {
-  background: rgba(20, 20, 24, 0.88);
+  background: #1f1f23;
   border-radius: 10px;
   padding: 12px;
-}
-
-body {
-  background-image: url("https://raw.githubusercontent.com/Getuliogx/twitch/main/3405d7e56e88a905a6e80ca8cf33af3f.jpg");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
 }

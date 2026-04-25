@@ -1,27 +1,27 @@
-(function () {
-  const DEFAULT_DATA = {
+document.addEventListener("DOMContentLoaded", function () {
+  var DEFAULT_DATA = {
     movies: [],
     series: [],
     anime: [],
     favorites: []
   };
 
-  let data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  var data = JSON.parse(JSON.stringify(DEFAULT_DATA));
 
-  const listEl = document.getElementById("list");
-  const searchInput = document.getElementById("searchInput");
-  const categorySelect = document.getElementById("category");
-  const statusMsg = document.getElementById("statusMsg");
+  var listEl = document.getElementById("list");
+  var searchInput = document.getElementById("searchInput");
+  var categorySelect = document.getElementById("category");
+  var statusMsg = document.getElementById("statusMsg");
 
   function setStatus(message) {
     statusMsg.textContent = message || "";
   }
 
-  function renderList(filter) {
-    const category = categorySelect.value;
-    const safeFilter = (filter || "").toLowerCase();
-    const items = (data[category] || []).filter(function (item) {
-      return (item.title || "").toLowerCase().includes(safeFilter);
+  function renderList(filterText) {
+    var category = categorySelect.value;
+    var filter = (filterText || "").toLowerCase();
+    var items = (data[category] || []).filter(function (item) {
+      return (item.title || "").toLowerCase().indexOf(filter) !== -1;
     });
 
     listEl.innerHTML = "";
@@ -32,14 +32,22 @@
     }
 
     items.forEach(function (item) {
-      const div = document.createElement("div");
+      var div = document.createElement("div");
       div.className = "card";
-      div.innerHTML = `
-        <img src="https://image.tmdb.org/t/p/w300${item.poster}" alt="">
-        <p>${item.title}</p>
-      `;
+      div.innerHTML =
+        '<img src="https://image.tmdb.org/t/p/w300' + item.poster + '" alt="">' +
+        '<p>' + escapeHtml(item.title) + '</p>';
       listEl.appendChild(div);
     });
+  }
+
+  function escapeHtml(text) {
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
   }
 
   searchInput.addEventListener("input", function () {
@@ -51,29 +59,28 @@
   });
 
   if (window.Twitch && window.Twitch.ext) {
-    window.Twitch.ext.configuration.onChanged(function () {
-      const cfg = window.Twitch.ext.configuration.broadcaster;
+    window.Twitch.ext.onAuthorized(function () {
+      setStatus("");
+    });
 
-      if (cfg && cfg.content) {
-        try {
+    window.Twitch.ext.configuration.onChanged(function () {
+      try {
+        var cfg = window.Twitch.ext.configuration.broadcaster;
+        if (cfg && cfg.content) {
           data = JSON.parse(cfg.content);
-        } catch (e) {
-          console.error(e);
+        } else {
           data = JSON.parse(JSON.stringify(DEFAULT_DATA));
         }
-      } else {
+      } catch (e) {
+        console.error(e);
         data = JSON.parse(JSON.stringify(DEFAULT_DATA));
       }
 
       renderList(searchInput.value);
-    });
-
-    window.Twitch.ext.onAuthorized(function () {
-      setStatus("");
     });
   } else {
     setStatus("Abra esta página dentro da Twitch.");
   }
 
   renderList("");
-})();
+});

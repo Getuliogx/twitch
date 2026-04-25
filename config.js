@@ -1,20 +1,20 @@
-(function () {
-  const API_KEY = "b095ccbbb185d27703d007ae0ded5f7d";
+document.addEventListener("DOMContentLoaded", function () {
+  var API_KEY = "b095ccbbb185d27703d007ae0ded5f7d";
 
-  const DEFAULT_DATA = {
+  var DEFAULT_DATA = {
     movies: [],
     series: [],
     anime: [],
     favorites: []
   };
 
-  let data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  var data = JSON.parse(JSON.stringify(DEFAULT_DATA));
 
-  const resultsEl = document.getElementById("results");
-  const listEl = document.getElementById("list");
-  const searchInput = document.getElementById("searchInput");
-  const categorySelect = document.getElementById("category");
-  const statusMsg = document.getElementById("statusMsg");
+  var resultsEl = document.getElementById("results");
+  var listEl = document.getElementById("list");
+  var searchInput = document.getElementById("searchInput");
+  var categorySelect = document.getElementById("category");
+  var statusMsg = document.getElementById("statusMsg");
 
   function setStatus(message) {
     statusMsg.textContent = message || "";
@@ -42,7 +42,7 @@
   function renderResults(items) {
     resultsEl.innerHTML = "";
 
-    const filtered = (items || []).filter(function (item) {
+    var filtered = (items || []).filter(function (item) {
       return item.poster_path && (item.title || item.name);
     });
 
@@ -52,30 +52,29 @@
     }
 
     filtered.forEach(function (item) {
-      const title = item.title || item.name;
+      var title = item.title || item.name;
 
-      const div = document.createElement("div");
+      var div = document.createElement("div");
       div.className = "card";
-      div.innerHTML = `
-        <img src="https://image.tmdb.org/t/p/w300${item.poster_path}" alt="">
-        <p>${title}</p>
-        <button type="button">Adicionar</button>
-      `;
+      div.innerHTML =
+        '<img src="https://image.tmdb.org/t/p/w300' + item.poster_path + '" alt="">' +
+        '<p>' + escapeHtml(title) + '</p>' +
+        '<button type="button">Adicionar</button>';
 
-      div.querySelector("button").onclick = function () {
+      div.querySelector("button").addEventListener("click", function () {
         addItem({
           title: title,
           poster: item.poster_path
         });
-      };
+      });
 
       resultsEl.appendChild(div);
     });
   }
 
   function addItem(item) {
-    const category = categorySelect.value;
-    const exists = (data[category] || []).some(function (i) {
+    var category = categorySelect.value;
+    var exists = (data[category] || []).some(function (i) {
       return i.title === item.title;
     });
 
@@ -90,15 +89,15 @@
   }
 
   function removeItem(index) {
-    const category = categorySelect.value;
+    var category = categorySelect.value;
     data[category].splice(index, 1);
     saveData();
     renderList();
   }
 
   function renderList() {
-    const category = categorySelect.value;
-    const items = data[category] || [];
+    var category = categorySelect.value;
+    var items = data[category] || [];
 
     listEl.innerHTML = "";
 
@@ -108,24 +107,32 @@
     }
 
     items.forEach(function (item, index) {
-      const div = document.createElement("div");
+      var div = document.createElement("div");
       div.className = "card";
-      div.innerHTML = `
-        <img src="https://image.tmdb.org/t/p/w300${item.poster}" alt="">
-        <p>${item.title}</p>
-        <button type="button">Remover</button>
-      `;
+      div.innerHTML =
+        '<img src="https://image.tmdb.org/t/p/w300' + item.poster + '" alt="">' +
+        '<p>' + escapeHtml(item.title) + '</p>' +
+        '<button type="button">Remover</button>';
 
-      div.querySelector("button").onclick = function () {
+      div.querySelector("button").addEventListener("click", function () {
         removeItem(index);
-      };
+      });
 
       listEl.appendChild(div);
     });
   }
 
+  function escapeHtml(text) {
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
   searchInput.addEventListener("input", async function () {
-    const query = searchInput.value.trim();
+    var query = searchInput.value.trim();
 
     if (query.length < 3) {
       resultsEl.innerHTML = "";
@@ -135,17 +142,17 @@
 
     try {
       setStatus("Buscando...");
-      const res = await fetch(
+      var res = await fetch(
         "https://api.themoviedb.org/3/search/multi?api_key=" +
           API_KEY +
           "&query=" +
           encodeURIComponent(query)
       );
-      const json = await res.json();
+      var json = await res.json();
       renderResults(json.results || []);
       setStatus("");
-    } catch (error) {
-      console.error(error);
+    } catch (e) {
+      console.error(e);
       setStatus("Erro ao buscar no TMDb.");
     }
   });
@@ -155,29 +162,28 @@
   });
 
   if (window.Twitch && window.Twitch.ext) {
-    window.Twitch.ext.configuration.onChanged(function () {
-      const cfg = window.Twitch.ext.configuration.broadcaster;
+    window.Twitch.ext.onAuthorized(function () {
+      setStatus("");
+    });
 
-      if (cfg && cfg.content) {
-        try {
+    window.Twitch.ext.configuration.onChanged(function () {
+      try {
+        var cfg = window.Twitch.ext.configuration.broadcaster;
+        if (cfg && cfg.content) {
           data = JSON.parse(cfg.content);
-        } catch (e) {
-          console.error(e);
+        } else {
           data = JSON.parse(JSON.stringify(DEFAULT_DATA));
         }
-      } else {
+      } catch (e) {
+        console.error(e);
         data = JSON.parse(JSON.stringify(DEFAULT_DATA));
       }
 
       renderList();
-    });
-
-    window.Twitch.ext.onAuthorized(function () {
-      setStatus("");
     });
   } else {
     setStatus("Abra esta página dentro da Twitch.");
   }
 
   renderList();
-})();
+});

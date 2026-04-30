@@ -8,16 +8,41 @@ document.addEventListener("DOMContentLoaded", function () {
     favorites: []
   };
 
-  var data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  var data = clone(DEFAULT_DATA);
 
-  var resultsEl = document.getElementById("results");
-  var listEl = document.getElementById("list");
   var searchInput = document.getElementById("searchInput");
-  var categorySelect = document.getElementById("category");
+  var categorySelect = document.getElementById("categorySelect");
+  var sortSelect = document.getElementById("sortSelect");
   var statusMsg = document.getElementById("statusMsg");
+  var resultsEl = document.getElementById("results");
+
+  var moviesList = document.getElementById("moviesList");
+  var seriesList = document.getElementById("seriesList");
+  var animeList = document.getElementById("animeList");
+  var favoritesList = document.getElementById("favoritesList");
+
+  function clone(obj) {
+    return JSON.parse(JSON.stringify(obj));
+  }
 
   function setStatus(message) {
     statusMsg.textContent = message || "";
+  }
+
+  function escapeHtml(text) {
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function normalizeText(text) {
+    return String(text || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
   }
 
   function saveData() {
@@ -39,6 +64,92 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
+  function sortItems(items, mode) {
+    var list = items.slice();
+
+    if (mode === "recent") {
+      list.sort(function (a, b) {
+        return (b.addedAt || 0) - (a.addedAt || 0);
+      });
+      return list;
+    }
+
+    if (mode === "oldest") {
+      list.sort(function (a, b) {
+        return (a.addedAt || 0) - (b.addedAt || 0);
+      });
+      return list;
+    }
+
+    list.sort(function (a, b) {
+      return normalizeText(a.title).localeCompare(normalizeText(b.title), "pt-BR");
+    });
+
+    return list;
+  }
+
+  function filterItems(items, term) {
+    var normalizedTerm = normalizeText(term);
+    if (!normalizedTerm) return items;
+
+    return items.filter(function (item) {
+      return normalizeText(item.title).indexOf(normalizedTerm) !== -1;
+    });
+  }
+
+  function renderCategory(targetEl, items, categoryKey) {
+    targetEl.innerHTML = "";
+
+    if (!items.length) {
+      targetEl.innerHTML = '<div class="empty">Nenhum item nessa categoria.</div>';
+      return;
+    }
+
+    items.forEach(function (item, displayIndex) {
+      var div = document.createElement("div");
+      div.className = "card";
+      div.innerHTML =
+        '<img src="https://image.tmdb.org/t/p/w300' + item.poster + '" alt="">' +
+        '<p>' + escapeHtml(item.title) + "</p>" +
+        '<button type="button">Remover</button>';
+
+      div.querySelector("button").addEventListener("click", function () {
+        removeById(categoryKey, item.id);
+      });
+
+      targetEl.appendChild(div);
+    });
+  }
+
+  function renderStoredLists() {
+    var term = searchInput.value || "";
+    var sortMode = sortSelect.value || "az";
+
+    renderCategory(
+      moviesList,
+      sortItems(filterItems(data.movies || [], term), sortMode),
+      "movies"
+    );
+
+    renderCategory(
+      seriesList,
+      sortItems(filterItems(data.series || [], term), sortMode),
+      "series"
+    );
+
+    renderCategory(
+      animeList,
+      sortItems(filterItems(data.anime || [], term), sortMode),
+      "anime"
+    );
+
+    renderCategory(
+      favoritesList,
+      sortItems(filterItems(data.favorites || [], term), sortMode),
+      "favorites"
+    );
+  }
+
   function renderResults(items) {
     resultsEl.innerHTML = "";
 
@@ -58,13 +169,15 @@ document.addEventListener("DOMContentLoaded", function () {
       div.className = "card";
       div.innerHTML =
         '<img src="https://image.tmdb.org/t/p/w300' + item.poster_path + '" alt="">' +
-        '<p>' + escapeHtml(title) + '</p>' +
+        '<p>' + escapeHtml(title) + "</p>" +
         '<button type="button">Adicionar</button>';
 
       div.querySelector("button").addEventListener("click", function () {
         addItem({
+          id: String(item.media_type || "item") + "_" + String(item.id),
           title: title,
-          poster: item.poster_path
+          poster: item.poster_path,
+          addedAt: Date.now()
         });
       });
 
@@ -74,8 +187,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function addItem(item) {
     var category = categorySelect.value;
-    var exists = (data[category] || []).some(function (i) {
-      return i.title === item.title;
+
+    if (!data[category]) {
+      data[category] = [];
+    }
+
+    var exists = data[category].some(function (i) {
+      return i.id === item.id || normalizeText(i.title) === normalizeText(item.title);
     });
 
     if (exists) {
@@ -85,54 +203,24 @@ document.addEventListener("DOMContentLoaded", function () {
 
     data[category].push(item);
     saveData();
-    renderList();
+    renderStoredLists();
   }
 
-  function removeItem(index) {
-    var category = categorySelect.value;
-    data[category].splice(index, 1);
-    saveData();
-    renderList();
-  }
+  function removeById(category, itemId) {
+    if (!data[category]) return;
 
-  function renderList() {
-    var category = categorySelect.value;
-    var items = data[category] || [];
-
-    listEl.innerHTML = "";
-
-    if (!items.length) {
-      listEl.innerHTML = '<div class="empty">Nenhum item adicionado nessa categoria.</div>';
-      return;
-    }
-
-    items.forEach(function (item, index) {
-      var div = document.createElement("div");
-      div.className = "card";
-      div.innerHTML =
-        '<img src="https://image.tmdb.org/t/p/w300' + item.poster + '" alt="">' +
-        '<p>' + escapeHtml(item.title) + '</p>' +
-        '<button type="button">Remover</button>';
-
-      div.querySelector("button").addEventListener("click", function () {
-        removeItem(index);
-      });
-
-      listEl.appendChild(div);
+    data[category] = data[category].filter(function (item) {
+      return item.id !== itemId;
     });
-  }
 
-  function escapeHtml(text) {
-    return String(text)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+    saveData();
+    renderStoredLists();
   }
 
   searchInput.addEventListener("input", async function () {
     var query = searchInput.value.trim();
+
+    renderStoredLists();
 
     if (query.length < 3) {
       resultsEl.innerHTML = "";
@@ -158,7 +246,11 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   categorySelect.addEventListener("change", function () {
-    renderList();
+    renderStoredLists();
+  });
+
+  sortSelect.addEventListener("change", function () {
+    renderStoredLists();
   });
 
   if (window.Twitch && window.Twitch.ext) {
@@ -172,18 +264,18 @@ document.addEventListener("DOMContentLoaded", function () {
         if (cfg && cfg.content) {
           data = JSON.parse(cfg.content);
         } else {
-          data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+          data = clone(DEFAULT_DATA);
         }
       } catch (e) {
         console.error(e);
-        data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+        data = clone(DEFAULT_DATA);
       }
 
-      renderList();
+      renderStoredLists();
     });
   } else {
     setStatus("Abra esta página dentro da Twitch.");
   }
 
-  renderList();
+  renderStoredLists();
 });

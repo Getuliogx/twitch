@@ -4,22 +4,22 @@ document.addEventListener("DOMContentLoaded", function () {
   var DEFAULT_DATA = {
     movies: [],
     series: [],
-    anime: [],
-    favorites: []
+    anime: []
   };
 
   var data = clone(DEFAULT_DATA);
 
   var searchInput = document.getElementById("searchInput");
-  var categorySelect = document.getElementById("categorySelect");
   var sortSelect = document.getElementById("sortSelect");
   var statusMsg = document.getElementById("statusMsg");
   var resultsEl = document.getElementById("results");
 
+  var favoritesList = document.getElementById("favoritesList");
   var moviesList = document.getElementById("moviesList");
   var seriesList = document.getElementById("seriesList");
   var animeList = document.getElementById("animeList");
-  var favoritesList = document.getElementById("favoritesList");
+
+  var draggedItemPayload = null;
 
   function clone(obj) {
     return JSON.parse(JSON.stringify(obj));
@@ -45,6 +45,33 @@ document.addEventListener("DOMContentLoaded", function () {
       .toLowerCase();
   }
 
+  function inferCategory(item) {
+    if (item.media_type === "movie") {
+      return "movies";
+    }
+
+    if (item.media_type === "tv") {
+      var genreIds = item.genre_ids || [];
+      var hasAnimation = genreIds.indexOf(16) !== -1;
+      var isJapanese = (item.original_language || "").toLowerCase() === "ja";
+
+      if (hasAnimation || isJapanese) {
+        return "anime";
+      }
+
+      return "series";
+    }
+
+    return "movies";
+  }
+
+  function categoryLabel(categoryKey) {
+    if (categoryKey === "movies") return "Filmes";
+    if (categoryKey === "series") return "Séries";
+    if (categoryKey === "anime") return "Animes";
+    return "";
+  }
+
   function saveData() {
     if (!window.Twitch || !window.Twitch.ext) {
       setStatus("Abra esta página dentro da Twitch.");
@@ -62,6 +89,24 @@ document.addEventListener("DOMContentLoaded", function () {
       console.error(e);
       setStatus("Erro ao salvar a lista.");
     }
+  }
+
+  function allItems() {
+    var combined = [];
+
+    ["movies", "series", "anime"].forEach(function (category) {
+      (data[category] || []).forEach(function (item) {
+        combined.push(item);
+      });
+    });
+
+    return combined;
+  }
+
+  function getFavoritesItems() {
+    return allItems().filter(function (item) {
+      return !!item.favorite;
+    });
   }
 
   function sortItems(items, mode) {
@@ -97,7 +142,116 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  function renderCategory(targetEl, items, categoryKey) {
+  function findItemById(id) {
+    var categories = ["movies", "series", "anime"];
+    for (var c = 0; c < categories.length; c++) {
+      var category = categories[c];
+      var list = data[category] || [];
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].id === id) {
+          return { category: category, index: i, item: list[i] };
+        }
+      }
+    }
+    return null;
+  }
+
+  function toggleFavoriteById(id) {
+    var found = findItemById(id);
+    if (!found) return;
+
+    found.item.favorite = !found.item.favorite;
+    saveData();
+    renderStoredLists();
+  }
+
+  function setFavoriteById(id, value) {
+    var found = findItemById(id);
+    if (!found) return;
+
+    found.item.favorite = !!value;
+    saveData();
+    renderStoredLists();
+  }
+
+  function removeById(id) {
+    var found = findItemById(id);
+    if (!found) return;
+
+    data[found.category].splice(found.index, 1);
+    saveData();
+    renderStoredLists();
+  }
+
+  function addItemFromSearch(item) {
+    var category = inferCategory(item);
+
+    if (!data[category]) {
+      data[category] = [];
+    }
+
+    var exists = data[category].some(function (storedItem) {
+      return storedItem.id === item.id;
+    });
+
+    if (exists) {
+      setStatus("Esse item já foi adicionado.");
+      return;
+    }
+
+    data[category].push({
+      id: String(item.media_type || "item") + "_" + String(item.id),
+      title: item.title || item.name,
+      poster: item.poster_path,
+      favorite: false,
+      addedAt: Date.now(),
+      category: category
+    });
+
+    saveData();
+    renderStoredLists();
+  }
+
+  function createStoredCard(item, showRemove) {
+    var div = document.createElement("div");
+    div.className = "card stored-card";
+    div.setAttribute("draggable", "true");
+    div.dataset.itemId = item.id;
+
+    div.innerHTML =
+      '<img src="https://image.tmdb.org/t/p/w300' + item.poster + '" alt="">' +
+      '<p>' + escapeHtml(item.title) + '</p>' +
+      '<div class="badge-line">' +
+      '<span class="category-badge">' + escapeHtml(categoryLabel(item.category)) + '</span>' +
+      (item.favorite ? '<span class="favorite-badge">★ Favorito</span>' : "") +
+      '</div>' +
+      '<button type="button" class="fav-btn">' + (item.favorite ? "Desfavoritar" : "Favoritar") + '</button>' +
+      (showRemove ? '<button type="button" class="remove-btn">Remover</button>' : '');
+
+    div.addEventListener("dragstart", function () {
+      draggedItemPayload = { id: item.id };
+      div.classList.add("dragging");
+    });
+
+    div.addEventListener("dragend", function () {
+      draggedItemPayload = null;
+      div.classList.remove("dragging");
+    });
+
+    div.querySelector(".fav-btn").addEventListener("click", function () {
+      toggleFavoriteById(item.id);
+    });
+
+    if (showRemove) {
+      div.querySelector(".remove-btn").addEventListener("click", function () {
+        removeById(item.id);
+      });
+    }
+
+    return div;
+  }
+
+  function renderCategory(targetEl, items, isFavorites) {
     targetEl.innerHTML = "";
 
     if (!items.length) {
@@ -105,19 +259,8 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    items.forEach(function (item, displayIndex) {
-      var div = document.createElement("div");
-      div.className = "card";
-      div.innerHTML =
-        '<img src="https://image.tmdb.org/t/p/w300' + item.poster + '" alt="">' +
-        '<p>' + escapeHtml(item.title) + "</p>" +
-        '<button type="button">Remover</button>';
-
-      div.querySelector("button").addEventListener("click", function () {
-        removeById(categoryKey, item.id);
-      });
-
-      targetEl.appendChild(div);
+    items.forEach(function (item) {
+      targetEl.appendChild(createStoredCard(item, !isFavorites));
     });
   }
 
@@ -126,27 +269,27 @@ document.addEventListener("DOMContentLoaded", function () {
     var sortMode = sortSelect.value || "az";
 
     renderCategory(
+      favoritesList,
+      sortItems(filterItems(getFavoritesItems(), term), sortMode),
+      true
+    );
+
+    renderCategory(
       moviesList,
       sortItems(filterItems(data.movies || [], term), sortMode),
-      "movies"
+      false
     );
 
     renderCategory(
       seriesList,
       sortItems(filterItems(data.series || [], term), sortMode),
-      "series"
+      false
     );
 
     renderCategory(
       animeList,
       sortItems(filterItems(data.anime || [], term), sortMode),
-      "anime"
-    );
-
-    renderCategory(
-      favoritesList,
-      sortItems(filterItems(data.favorites || [], term), sortMode),
-      "favorites"
+      false
     );
   }
 
@@ -154,7 +297,7 @@ document.addEventListener("DOMContentLoaded", function () {
     resultsEl.innerHTML = "";
 
     var filtered = (items || []).filter(function (item) {
-      return item.poster_path && (item.title || item.name);
+      return item.poster_path && (item.title || item.name) && (item.media_type === "movie" || item.media_type === "tv");
     });
 
     if (!filtered.length) {
@@ -163,58 +306,24 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     filtered.forEach(function (item) {
-      var title = item.title || item.name;
+      var inferred = inferCategory(item);
 
       var div = document.createElement("div");
       div.className = "card";
       div.innerHTML =
         '<img src="https://image.tmdb.org/t/p/w300' + item.poster_path + '" alt="">' +
-        '<p>' + escapeHtml(title) + "</p>" +
+        '<p>' + escapeHtml(item.title || item.name) + '</p>' +
+        '<div class="badge-line">' +
+        '<span class="category-badge">' + escapeHtml(categoryLabel(inferred)) + '</span>' +
+        '</div>' +
         '<button type="button">Adicionar</button>';
 
       div.querySelector("button").addEventListener("click", function () {
-        addItem({
-          id: String(item.media_type || "item") + "_" + String(item.id),
-          title: title,
-          poster: item.poster_path,
-          addedAt: Date.now()
-        });
+        addItemFromSearch(item);
       });
 
       resultsEl.appendChild(div);
     });
-  }
-
-  function addItem(item) {
-    var category = categorySelect.value;
-
-    if (!data[category]) {
-      data[category] = [];
-    }
-
-    var exists = data[category].some(function (i) {
-      return i.id === item.id || normalizeText(i.title) === normalizeText(item.title);
-    });
-
-    if (exists) {
-      setStatus("Esse item já foi adicionado nessa categoria.");
-      return;
-    }
-
-    data[category].push(item);
-    saveData();
-    renderStoredLists();
-  }
-
-  function removeById(category, itemId) {
-    if (!data[category]) return;
-
-    data[category] = data[category].filter(function (item) {
-      return item.id !== itemId;
-    });
-
-    saveData();
-    renderStoredLists();
   }
 
   searchInput.addEventListener("input", async function () {
@@ -245,12 +354,26 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  categorySelect.addEventListener("change", function () {
+  sortSelect.addEventListener("change", function () {
     renderStoredLists();
   });
 
-  sortSelect.addEventListener("change", function () {
-    renderStoredLists();
+  favoritesList.addEventListener("dragover", function (e) {
+    e.preventDefault();
+    favoritesList.classList.add("drop-active");
+  });
+
+  favoritesList.addEventListener("dragleave", function () {
+    favoritesList.classList.remove("drop-active");
+  });
+
+  favoritesList.addEventListener("drop", function (e) {
+    e.preventDefault();
+    favoritesList.classList.remove("drop-active");
+
+    if (draggedItemPayload && draggedItemPayload.id) {
+      setFavoriteById(draggedItemPayload.id, true);
+    }
   });
 
   if (window.Twitch && window.Twitch.ext) {

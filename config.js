@@ -72,6 +72,16 @@ document.addEventListener("DOMContentLoaded", function () {
     return "";
   }
 
+  function getDisplayTitle(item) {
+    return (
+      item.title ||
+      item.name ||
+      item.original_title ||
+      item.original_name ||
+      "Sem título"
+    );
+  }
+
   function saveData() {
     if (!window.Twitch || !window.Twitch.ext) {
       setStatus("Abra esta página dentro da Twitch.");
@@ -190,8 +200,10 @@ document.addEventListener("DOMContentLoaded", function () {
       data[category] = [];
     }
 
+    var itemId = String(item.media_type || "item") + "_" + String(item.id);
+
     var exists = data[category].some(function (storedItem) {
-      return storedItem.id === item.id;
+      return storedItem.id === itemId;
     });
 
     if (exists) {
@@ -200,8 +212,8 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     data[category].push({
-      id: String(item.media_type || "item") + "_" + String(item.id),
-      title: item.title || item.name,
+      id: itemId,
+      title: getDisplayTitle(item),
       poster: item.poster_path,
       favorite: false,
       addedAt: Date.now(),
@@ -220,7 +232,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     div.innerHTML =
       '<img src="https://image.tmdb.org/t/p/w300' + item.poster + '" alt="">' +
-      '<p>' + escapeHtml(item.title) + '</p>' +
+      '<p>' + escapeHtml(item.title) + "</p>" +
       '<div class="badge-line">' +
       '<span class="category-badge">' + escapeHtml(categoryLabel(item.category)) + '</span>' +
       (item.favorite ? '<span class="favorite-badge">★ Favorito</span>' : "") +
@@ -297,7 +309,7 @@ document.addEventListener("DOMContentLoaded", function () {
     resultsEl.innerHTML = "";
 
     var filtered = (items || []).filter(function (item) {
-      return item.poster_path && (item.title || item.name) && (item.media_type === "movie" || item.media_type === "tv");
+      return item.poster_path && getDisplayTitle(item) && (item.media_type === "movie" || item.media_type === "tv");
     });
 
     if (!filtered.length) {
@@ -307,12 +319,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
     filtered.forEach(function (item) {
       var inferred = inferCategory(item);
+      var title = getDisplayTitle(item);
 
       var div = document.createElement("div");
       div.className = "card";
       div.innerHTML =
         '<img src="https://image.tmdb.org/t/p/w300' + item.poster_path + '" alt="">' +
-        '<p>' + escapeHtml(item.title || item.name) + '</p>' +
+        '<p>' + escapeHtml(title) + "</p>" +
         '<div class="badge-line">' +
         '<span class="category-badge">' + escapeHtml(categoryLabel(inferred)) + '</span>' +
         '</div>' +
@@ -342,7 +355,7 @@ document.addEventListener("DOMContentLoaded", function () {
       var res = await fetch(
         "https://api.themoviedb.org/3/search/multi?api_key=" +
           API_KEY +
-          "&query=" +
+          "&language=pt-BR&include_adult=false&query=" +
           encodeURIComponent(query)
       );
       var json = await res.json();

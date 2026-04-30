@@ -11,23 +11,49 @@
   <main class="app">
     <h1>Configurar Lista</h1>
 
-    <div class="toolbar">
+    <div class="top-controls">
       <input type="text" id="searchInput" placeholder="Buscar filme, série, anime...">
-      <select id="category">
+
+      <select id="categorySelect">
         <option value="movies">Filmes</option>
         <option value="series">Séries</option>
         <option value="anime">Animes</option>
         <option value="favorites">Favoritos</option>
       </select>
+
+      <select id="sortSelect">
+        <option value="az">A-Z</option>
+        <option value="recent">adicionado recente</option>
+        <option value="oldest">adicionado antigo</option>
+      </select>
     </div>
 
     <div id="statusMsg" class="status"></div>
 
-    <h2>Resultados</h2>
-    <div id="results" class="grid"></div>
+    <section class="category-section">
+      <h2>Resultados</h2>
+      <div id="results" class="horizontal-list"></div>
+    </section>
 
-    <h2>Itens adicionados</h2>
-    <div id="list" class="grid"></div>
+    <section class="category-section">
+      <h2>Filmes</h2>
+      <div id="moviesList" class="horizontal-list"></div>
+    </section>
+
+    <section class="category-section">
+      <h2>Séries</h2>
+      <div id="seriesList" class="horizontal-list"></div>
+    </section>
+
+    <section class="category-section">
+      <h2>Animes</h2>
+      <div id="animeList" class="horizontal-list"></div>
+    </section>
+
+    <section class="category-section">
+      <h2>Favoritos</h2>
+      <div id="favoritesList" class="horizontal-list"></div>
+    </section>
   </main>
 
   <script src="config.js"></script>

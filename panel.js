@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {
     anime: []
   };
 
-  var data = clone(DEFAULT_DATA);
+  var data = JSON.parse(JSON.stringify(DEFAULT_DATA));
 
   var searchInput = document.getElementById("searchInput");
   var sortSelect = document.getElementById("sortSelect");
@@ -15,10 +15,6 @@ document.addEventListener("DOMContentLoaded", function () {
   var moviesList = document.getElementById("moviesList");
   var seriesList = document.getElementById("seriesList");
   var animeList = document.getElementById("animeList");
-
-  function clone(obj) {
-    return JSON.parse(JSON.stringify(obj));
-  }
 
   function setStatus(message) {
     statusMsg.textContent = message || "";
@@ -42,13 +38,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function allItems() {
     var combined = [];
-
     ["movies", "series", "anime"].forEach(function (category) {
       (data[category] || []).forEach(function (item) {
         combined.push(item);
       });
     });
-
     return combined;
   }
 
@@ -113,77 +107,25 @@ document.addEventListener("DOMContentLoaded", function () {
     var term = searchInput.value || "";
     var sortMode = sortSelect.value || "az";
 
-    renderCategory(
-      favoritesList,
-      sortItems(filterItems(getFavoritesItems(), term), sortMode)
-    );
-
-    renderCategory(
-      moviesList,
-      sortItems(filterItems(data.movies || [], term), sortMode)
-    );
-
-    renderCategory(
-      seriesList,
-      sortItems(filterItems(data.series || [], term), sortMode)
-    );
-
-    renderCategory(
-      animeList,
-      sortItems(filterItems(data.anime || [], term), sortMode)
-    );
+    renderCategory(favoritesList, sortItems(filterItems(getFavoritesItems(), term), sortMode));
+    renderCategory(moviesList, sortItems(filterItems(data.movies || [], term), sortMode));
+    renderCategory(seriesList, sortItems(filterItems(data.series || [], term), sortMode));
+    renderCategory(animeList, sortItems(filterItems(data.anime || [], term), sortMode));
   }
 
-  function enableHorizontalTouchScroll() {
-    var lists = document.querySelectorAll(".horizontal-list");
+  function setupScrollButtons() {
+    document.querySelectorAll(".scroll-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var targetId = btn.getAttribute("data-target");
+        var dir = btn.getAttribute("data-dir");
+        var el = document.getElementById(targetId);
+        if (!el) return;
 
-    lists.forEach(function (list) {
-      var startX = 0;
-      var startY = 0;
-      var startScrollLeft = 0;
-      var isTouching = false;
-      var lockAxis = null;
-
-      list.addEventListener("touchstart", function (e) {
-        if (!e.touches || !e.touches[0]) return;
-        var touch = e.touches[0];
-
-        isTouching = true;
-        lockAxis = null;
-        startX = touch.clientX;
-        startY = touch.clientY;
-        startScrollLeft = list.scrollLeft;
-      }, { passive: true });
-
-      list.addEventListener("touchmove", function (e) {
-        if (!isTouching || !e.touches || !e.touches[0]) return;
-
-        var touch = e.touches[0];
-        var dx = touch.clientX - startX;
-        var dy = touch.clientY - startY;
-
-        if (!lockAxis) {
-          if (Math.abs(dx) < 8 && Math.abs(dy) < 8) {
-            return;
-          }
-          lockAxis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
-        }
-
-        if (lockAxis === "x") {
-          list.scrollLeft = startScrollLeft - dx;
-          e.preventDefault();
-          e.stopPropagation();
-        }
-      }, { passive: false });
-
-      list.addEventListener("touchend", function () {
-        isTouching = false;
-        lockAxis = null;
-      });
-
-      list.addEventListener("touchcancel", function () {
-        isTouching = false;
-        lockAxis = null;
+        var amount = 220;
+        el.scrollBy({
+          left: dir === "left" ? -amount : amount,
+          behavior: "smooth"
+        });
       });
     });
   }
@@ -202,20 +144,19 @@ document.addEventListener("DOMContentLoaded", function () {
         if (cfg && cfg.content) {
           data = JSON.parse(cfg.content);
         } else {
-          data = clone(DEFAULT_DATA);
+          data = JSON.parse(JSON.stringify(DEFAULT_DATA));
         }
       } catch (e) {
         console.error(e);
-        data = clone(DEFAULT_DATA);
+        data = JSON.parse(JSON.stringify(DEFAULT_DATA));
       }
 
       renderAll();
-      enableHorizontalTouchScroll();
     });
   } else {
     setStatus("Abra esta página dentro da Twitch.");
   }
 
+  setupScrollButtons();
   renderAll();
-  enableHorizontalTouchScroll();
 });

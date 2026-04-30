@@ -134,6 +134,60 @@ document.addEventListener("DOMContentLoaded", function () {
     );
   }
 
+  function enableNaturalHorizontalScroll() {
+    var lists = document.querySelectorAll(".horizontal-list");
+
+    lists.forEach(function (list) {
+      var startX = 0;
+      var startY = 0;
+      var startScrollLeft = 0;
+      var dragging = false;
+      var directionLocked = null;
+
+      list.addEventListener("touchstart", function (e) {
+        if (!e.touches || !e.touches.length) return;
+
+        var touch = e.touches[0];
+        startX = touch.clientX;
+        startY = touch.clientY;
+        startScrollLeft = list.scrollLeft;
+        dragging = true;
+        directionLocked = null;
+      }, { passive: true });
+
+      list.addEventListener("touchmove", function (e) {
+        if (!dragging || !e.touches || !e.touches.length) return;
+
+        var touch = e.touches[0];
+        var deltaX = touch.clientX - startX;
+        var deltaY = touch.clientY - startY;
+
+        if (!directionLocked) {
+          if (Math.abs(deltaX) < 8 && Math.abs(deltaY) < 8) {
+            return;
+          }
+
+          directionLocked = Math.abs(deltaX) > Math.abs(deltaY) ? "x" : "y";
+        }
+
+        if (directionLocked === "x") {
+          list.scrollLeft = startScrollLeft - deltaX;
+          e.preventDefault();
+        }
+      }, { passive: false });
+
+      list.addEventListener("touchend", function () {
+        dragging = false;
+        directionLocked = null;
+      });
+
+      list.addEventListener("touchcancel", function () {
+        dragging = false;
+        directionLocked = null;
+      });
+    });
+  }
+
   searchInput.addEventListener("input", renderAll);
   sortSelect.addEventListener("change", renderAll);
 
@@ -156,52 +210,12 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       renderAll();
+      enableNaturalHorizontalScroll();
     });
   } else {
     setStatus("Abra esta página dentro da Twitch.");
   }
 
   renderAll();
+  enableNaturalHorizontalScroll();
 });
-
-(function enableHorizontalTouchScroll() {
-  var lists = document.querySelectorAll(".horizontal-list");
-
-  lists.forEach(function (list) {
-    var isDown = false;
-    var startX = 0;
-    var startScrollLeft = 0;
-    var touchStartedInside = false;
-
-    list.addEventListener("touchstart", function (e) {
-      if (!e.touches || !e.touches.length) return;
-      touchStartedInside = true;
-      isDown = true;
-      startX = e.touches[0].pageX;
-      startScrollLeft = list.scrollLeft;
-    }, { passive: true });
-
-    list.addEventListener("touchmove", function (e) {
-      if (!isDown || !touchStartedInside || !e.touches || !e.touches.length) return;
-
-      var x = e.touches[0].pageX;
-      var walk = x - startX;
-
-      list.scrollLeft = startScrollLeft - walk;
-
-      if (Math.abs(walk) > 6) {
-        e.preventDefault();
-      }
-    }, { passive: false });
-
-    list.addEventListener("touchend", function () {
-      isDown = false;
-      touchStartedInside = false;
-    });
-
-    list.addEventListener("touchcancel", function () {
-      isDown = false;
-      touchStartedInside = false;
-    });
-  });
-})();

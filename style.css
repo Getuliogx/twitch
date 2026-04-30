@@ -8,7 +8,7 @@ html, body {
   min-height: 100%;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: hidden !important;
   background: #0e0e10;
   color: #ffffff;
   font-family: Arial, sans-serif;
@@ -16,13 +16,15 @@ html, body {
 
 body {
   position: relative;
+  overscroll-behavior-x: none;
+  touch-action: pan-y;
 }
 
 .app {
   padding: 16px;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: hidden !important;
 }
 
 h1, h2 {
@@ -74,6 +76,7 @@ h2 {
   margin-bottom: 28px;
   width: 100%;
   max-width: 100%;
+  overflow-x: hidden;
 }
 
 .horizontal-list {
@@ -81,15 +84,15 @@ h2 {
   gap: 12px;
   width: 100%;
   max-width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 0 0 8px 0;
-  scroll-behavior: smooth;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  padding: 0 0 10px 0;
   min-height: 260px;
 
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
   touch-action: pan-x;
+  scroll-behavior: auto;
 }
 
 .horizontal-list::-webkit-scrollbar {

@@ -12,14 +12,7 @@
     <h1>Configurar Lista</h1>
 
     <div class="top-controls">
-      <input type="text" id="searchInput" placeholder="Buscar filme, série, anime...">
-
-      <select id="categorySelect">
-        <option value="movies">Filmes</option>
-        <option value="series">Séries</option>
-        <option value="anime">Animes</option>
-        <option value="favorites">Favoritos</option>
-      </select>
+      <input type="text" id="searchInput" placeholder="Buscar filme, série ou anime...">
 
       <select id="sortSelect">
         <option value="az">A-Z</option>
@@ -31,8 +24,13 @@
     <div id="statusMsg" class="status"></div>
 
     <section class="category-section">
-      <h2>Resultados</h2>
+      <h2>Resultados da busca</h2>
       <div id="results" class="horizontal-list"></div>
+    </section>
+
+    <section class="category-section favorites-drop-section">
+      <h2>Favoritos</h2>
+      <div id="favoritesList" class="horizontal-list drop-zone"></div>
     </section>
 
     <section class="category-section">
@@ -48,11 +46,6 @@
     <section class="category-section">
       <h2>Animes</h2>
       <div id="animeList" class="horizontal-list"></div>
-    </section>
-
-    <section class="category-section">
-      <h2>Favoritos</h2>
-      <div id="favoritesList" class="horizontal-list"></div>
     </section>
   </main>
 

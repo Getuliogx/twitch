@@ -6,13 +6,23 @@ html, body {
   margin: 0;
   padding: 0;
   min-height: 100%;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   background: #0e0e10;
   color: #ffffff;
   font-family: Arial, sans-serif;
 }
 
+body {
+  position: relative;
+}
+
 .app {
   padding: 16px;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 h1, h2 {
@@ -28,6 +38,8 @@ h2 {
   display: flex;
   gap: 10px;
   margin-bottom: 14px;
+  width: 100%;
+  max-width: 100%;
 }
 
 .top-controls input,
@@ -37,6 +49,7 @@ h2 {
   border-radius: 8px;
   padding: 0 12px;
   font-size: 16px;
+  min-width: 0;
 }
 
 .top-controls input {
@@ -46,6 +59,8 @@ h2 {
 
 .top-controls select {
   width: 180px;
+  max-width: 100%;
+  flex-shrink: 0;
 }
 
 .status {
@@ -57,16 +72,24 @@ h2 {
 
 .category-section {
   margin-bottom: 28px;
+  width: 100%;
+  max-width: 100%;
 }
 
 .horizontal-list {
   display: flex;
   gap: 12px;
+  width: 100%;
+  max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  padding-bottom: 8px;
+  padding: 0 0 8px 0;
   scroll-behavior: smooth;
   min-height: 260px;
+
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
 }
 
 .horizontal-list::-webkit-scrollbar {
@@ -85,6 +108,8 @@ h2 {
 
 .card {
   flex: 0 0 150px;
+  min-width: 150px;
+  max-width: 150px;
   background: #1f1f23;
   border-radius: 10px;
   padding: 8px;
@@ -166,11 +191,15 @@ h2 {
     flex-direction: column;
   }
 
-  .top-controls select {
+  .top-controls select,
+  .top-controls input {
     width: 100%;
+    max-width: 100%;
   }
 
   .card {
     flex: 0 0 140px;
+    min-width: 140px;
+    max-width: 140px;
   }
 }

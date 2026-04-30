@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", function () {
     anime: []
   };
 
-  var data = clone(DEFAULT_DATA);
+  var data = JSON.parse(JSON.stringify(DEFAULT_DATA));
 
   var searchInput = document.getElementById("searchInput");
   var sortSelect = document.getElementById("sortSelect");
@@ -20,10 +20,6 @@ document.addEventListener("DOMContentLoaded", function () {
   var animeList = document.getElementById("animeList");
 
   var draggedItemPayload = null;
-
-  function clone(obj) {
-    return JSON.parse(JSON.stringify(obj));
-  }
 
   function setStatus(message) {
     statusMsg.textContent = message || "";
@@ -52,9 +48,7 @@ document.addEventListener("DOMContentLoaded", function () {
       var genreIds = item.genre_ids || [];
       var hasAnimation = genreIds.indexOf(16) !== -1;
       var isJapanese = (item.original_language || "").toLowerCase() === "ja";
-
-      if (hasAnimation || isJapanese) return "anime";
-      return "series";
+      return hasAnimation || isJapanese ? "anime" : "series";
     }
 
     return "movies";
@@ -68,13 +62,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function getDisplayTitle(item) {
-    return (
-      item.title ||
-      item.name ||
-      item.original_title ||
-      item.original_name ||
-      "Sem título"
-    );
+    return item.title || item.name || item.original_title || item.original_name || "Sem título";
   }
 
   function saveData() {
@@ -84,11 +72,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     try {
-      window.Twitch.ext.configuration.set(
-        "broadcaster",
-        "1",
-        JSON.stringify(data)
-      );
+      window.Twitch.ext.configuration.set("broadcaster", "1", JSON.stringify(data));
       setStatus("Lista salva.");
     } catch (e) {
       console.error(e);
@@ -98,13 +82,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function allItems() {
     var combined = [];
-
     ["movies", "series", "anime"].forEach(function (category) {
       (data[category] || []).forEach(function (item) {
         combined.push(item);
       });
     });
-
     return combined;
   }
 
@@ -149,15 +131,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function findItemById(id) {
     var categories = ["movies", "series", "anime"];
+
     for (var c = 0; c < categories.length; c++) {
       var category = categories[c];
       var list = data[category] || [];
+
       for (var i = 0; i < list.length; i++) {
         if (list[i].id === id) {
           return { category: category, index: i, item: list[i] };
         }
       }
     }
+
     return null;
   }
 
@@ -190,10 +175,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function addItemFromSearch(item) {
     var category = inferCategory(item);
-
-    if (!data[category]) {
-      data[category] = [];
-    }
+    if (!data[category]) data[category] = [];
 
     var itemId = String(item.media_type || "item") + "_" + String(item.id);
 
@@ -227,12 +209,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
     div.innerHTML =
       '<img src="https://image.tmdb.org/t/p/w300' + item.poster + '" alt="">' +
-      '<p>' + escapeHtml(item.title) + "</p>" +
+      '<p>' + escapeHtml(item.title) + '</p>' +
       '<div class="badge-line">' +
       '<span class="category-badge">' + escapeHtml(categoryLabel(item.category)) + '</span>' +
-      (item.favorite ? '<span class="favorite-badge">★ Favorito</span>' : "") +
+      (item.favorite ? '<span class="favorite-badge">★ Favorito</span>' : '') +
       '</div>' +
-      '<button type="button" class="fav-btn">' + (item.favorite ? "Desfavoritar" : "Favoritar") + '</button>' +
+      '<button type="button" class="fav-btn">' + (item.favorite ? 'Desfavoritar' : 'Favoritar') + '</button>' +
       (showRemove ? '<button type="button" class="remove-btn">Remover</button>' : '');
 
     div.addEventListener("dragstart", function () {
@@ -275,29 +257,10 @@ document.addEventListener("DOMContentLoaded", function () {
     var term = searchInput.value || "";
     var sortMode = sortSelect.value || "az";
 
-    renderCategory(
-      favoritesList,
-      sortItems(filterItems(getFavoritesItems(), term), sortMode),
-      true
-    );
-
-    renderCategory(
-      moviesList,
-      sortItems(filterItems(data.movies || [], term), sortMode),
-      false
-    );
-
-    renderCategory(
-      seriesList,
-      sortItems(filterItems(data.series || [], term), sortMode),
-      false
-    );
-
-    renderCategory(
-      animeList,
-      sortItems(filterItems(data.anime || [], term), sortMode),
-      false
-    );
+    renderCategory(favoritesList, sortItems(filterItems(getFavoritesItems(), term), sortMode), true);
+    renderCategory(moviesList, sortItems(filterItems(data.movies || [], term), sortMode), false);
+    renderCategory(seriesList, sortItems(filterItems(data.series || [], term), sortMode), false);
+    renderCategory(animeList, sortItems(filterItems(data.anime || [], term), sortMode), false);
   }
 
   function renderResults(items) {
@@ -320,10 +283,8 @@ document.addEventListener("DOMContentLoaded", function () {
       div.className = "card";
       div.innerHTML =
         '<img src="https://image.tmdb.org/t/p/w300' + item.poster_path + '" alt="">' +
-        '<p>' + escapeHtml(title) + "</p>" +
-        '<div class="badge-line">' +
-        '<span class="category-badge">' + escapeHtml(categoryLabel(inferred)) + '</span>' +
-        '</div>' +
+        '<p>' + escapeHtml(title) + '</p>' +
+        '<div class="badge-line"><span class="category-badge">' + escapeHtml(categoryLabel(inferred)) + '</span></div>' +
         '<button type="button">Adicionar</button>';
 
       div.querySelector("button").addEventListener("click", function () {
@@ -334,56 +295,19 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  function enableHorizontalTouchScroll() {
-    var lists = document.querySelectorAll(".horizontal-list");
+  function setupScrollButtons() {
+    document.querySelectorAll(".scroll-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var targetId = btn.getAttribute("data-target");
+        var dir = btn.getAttribute("data-dir");
+        var el = document.getElementById(targetId);
+        if (!el) return;
 
-    lists.forEach(function (list) {
-      var startX = 0;
-      var startY = 0;
-      var startScrollLeft = 0;
-      var isTouching = false;
-      var lockAxis = null;
-
-      list.addEventListener("touchstart", function (e) {
-        if (!e.touches || !e.touches[0]) return;
-        var touch = e.touches[0];
-
-        isTouching = true;
-        lockAxis = null;
-        startX = touch.clientX;
-        startY = touch.clientY;
-        startScrollLeft = list.scrollLeft;
-      }, { passive: true });
-
-      list.addEventListener("touchmove", function (e) {
-        if (!isTouching || !e.touches || !e.touches[0]) return;
-
-        var touch = e.touches[0];
-        var dx = touch.clientX - startX;
-        var dy = touch.clientY - startY;
-
-        if (!lockAxis) {
-          if (Math.abs(dx) < 8 && Math.abs(dy) < 8) {
-            return;
-          }
-          lockAxis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
-        }
-
-        if (lockAxis === "x") {
-          list.scrollLeft = startScrollLeft - dx;
-          e.preventDefault();
-          e.stopPropagation();
-        }
-      }, { passive: false });
-
-      list.addEventListener("touchend", function () {
-        isTouching = false;
-        lockAxis = null;
-      });
-
-      list.addEventListener("touchcancel", function () {
-        isTouching = false;
-        lockAxis = null;
+        var amount = 220;
+        el.scrollBy({
+          left: dir === "left" ? -amount : amount,
+          behavior: "smooth"
+        });
       });
     });
   }
@@ -403,9 +327,9 @@ document.addEventListener("DOMContentLoaded", function () {
       setStatus("Buscando...");
       var res = await fetch(
         "https://api.themoviedb.org/3/search/multi?api_key=" +
-          API_KEY +
-          "&language=pt-BR&include_adult=false&query=" +
-          encodeURIComponent(query)
+        API_KEY +
+        "&language=pt-BR&include_adult=false&query=" +
+        encodeURIComponent(query)
       );
       var json = await res.json();
       renderResults(json.results || []);
@@ -449,20 +373,19 @@ document.addEventListener("DOMContentLoaded", function () {
         if (cfg && cfg.content) {
           data = JSON.parse(cfg.content);
         } else {
-          data = clone(DEFAULT_DATA);
+          data = JSON.parse(JSON.stringify(DEFAULT_DATA));
         }
       } catch (e) {
         console.error(e);
-        data = clone(DEFAULT_DATA);
+        data = JSON.parse(JSON.stringify(DEFAULT_DATA));
       }
 
       renderStoredLists();
-      enableHorizontalTouchScroll();
     });
   } else {
     setStatus("Abra esta página dentro da Twitch.");
   }
 
+  setupScrollButtons();
   renderStoredLists();
-  enableHorizontalTouchScroll();
 });

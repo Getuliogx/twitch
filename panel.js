@@ -2,8 +2,7 @@ document.addEventListener("DOMContentLoaded", function () {
   var DEFAULT_DATA = {
     movies: [],
     series: [],
-    anime: [],
-    favorites: []
+    anime: []
   };
 
   var data = clone(DEFAULT_DATA);
@@ -12,10 +11,10 @@ document.addEventListener("DOMContentLoaded", function () {
   var sortSelect = document.getElementById("sortSelect");
   var statusMsg = document.getElementById("statusMsg");
 
+  var favoritesList = document.getElementById("favoritesList");
   var moviesList = document.getElementById("moviesList");
   var seriesList = document.getElementById("seriesList");
   var animeList = document.getElementById("animeList");
-  var favoritesList = document.getElementById("favoritesList");
 
   function clone(obj) {
     return JSON.parse(JSON.stringify(obj));
@@ -39,6 +38,24 @@ document.addEventListener("DOMContentLoaded", function () {
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase();
+  }
+
+  function allItems() {
+    var combined = [];
+
+    ["movies", "series", "anime"].forEach(function (category) {
+      (data[category] || []).forEach(function (item) {
+        combined.push(item);
+      });
+    });
+
+    return combined;
+  }
+
+  function getFavoritesItems() {
+    return allItems().filter(function (item) {
+      return !!item.favorite;
+    });
   }
 
   function sortItems(items, mode) {
@@ -87,7 +104,7 @@ document.addEventListener("DOMContentLoaded", function () {
       div.className = "card";
       div.innerHTML =
         '<img src="https://image.tmdb.org/t/p/w300' + item.poster + '" alt="">' +
-        '<p>' + escapeHtml(item.title) + "</p>";
+        '<p>' + escapeHtml(item.title) + '</p>';
       targetEl.appendChild(div);
     });
   }
@@ -95,6 +112,11 @@ document.addEventListener("DOMContentLoaded", function () {
   function renderAll() {
     var term = searchInput.value || "";
     var sortMode = sortSelect.value || "az";
+
+    renderCategory(
+      favoritesList,
+      sortItems(filterItems(getFavoritesItems(), term), sortMode)
+    );
 
     renderCategory(
       moviesList,
@@ -109,11 +131,6 @@ document.addEventListener("DOMContentLoaded", function () {
     renderCategory(
       animeList,
       sortItems(filterItems(data.anime || [], term), sortMode)
-    );
-
-    renderCategory(
-      favoritesList,
-      sortItems(filterItems(data.favorites || [], term), sortMode)
     );
   }
 

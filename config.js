@@ -46,19 +46,14 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function inferCategory(item) {
-    if (item.media_type === "movie") {
-      return "movies";
-    }
+    if (item.media_type === "movie") return "movies";
 
     if (item.media_type === "tv") {
       var genreIds = item.genre_ids || [];
       var hasAnimation = genreIds.indexOf(16) !== -1;
       var isJapanese = (item.original_language || "").toLowerCase() === "ja";
 
-      if (hasAnimation || isJapanese) {
-        return "anime";
-      }
-
+      if (hasAnimation || isJapanese) return "anime";
       return "series";
     }
 
@@ -339,56 +334,56 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  function enableNaturalHorizontalScroll() {
+  function enableHorizontalTouchScroll() {
     var lists = document.querySelectorAll(".horizontal-list");
 
     lists.forEach(function (list) {
       var startX = 0;
       var startY = 0;
       var startScrollLeft = 0;
-      var dragging = false;
-      var directionLocked = null;
+      var isTouching = false;
+      var lockAxis = null;
 
       list.addEventListener("touchstart", function (e) {
-        if (!e.touches || !e.touches.length) return;
-
+        if (!e.touches || !e.touches[0]) return;
         var touch = e.touches[0];
+
+        isTouching = true;
+        lockAxis = null;
         startX = touch.clientX;
         startY = touch.clientY;
         startScrollLeft = list.scrollLeft;
-        dragging = true;
-        directionLocked = null;
       }, { passive: true });
 
       list.addEventListener("touchmove", function (e) {
-        if (!dragging || !e.touches || !e.touches.length) return;
+        if (!isTouching || !e.touches || !e.touches[0]) return;
 
         var touch = e.touches[0];
-        var deltaX = touch.clientX - startX;
-        var deltaY = touch.clientY - startY;
+        var dx = touch.clientX - startX;
+        var dy = touch.clientY - startY;
 
-        if (!directionLocked) {
-          if (Math.abs(deltaX) < 8 && Math.abs(deltaY) < 8) {
+        if (!lockAxis) {
+          if (Math.abs(dx) < 8 && Math.abs(dy) < 8) {
             return;
           }
-
-          directionLocked = Math.abs(deltaX) > Math.abs(deltaY) ? "x" : "y";
+          lockAxis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
         }
 
-        if (directionLocked === "x") {
-          list.scrollLeft = startScrollLeft - deltaX;
+        if (lockAxis === "x") {
+          list.scrollLeft = startScrollLeft - dx;
           e.preventDefault();
+          e.stopPropagation();
         }
       }, { passive: false });
 
       list.addEventListener("touchend", function () {
-        dragging = false;
-        directionLocked = null;
+        isTouching = false;
+        lockAxis = null;
       });
 
       list.addEventListener("touchcancel", function () {
-        dragging = false;
-        directionLocked = null;
+        isTouching = false;
+        lockAxis = null;
       });
     });
   }
@@ -462,12 +457,12 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       renderStoredLists();
-      enableNaturalHorizontalScroll();
+      enableHorizontalTouchScroll();
     });
   } else {
     setStatus("Abra esta página dentro da Twitch.");
   }
 
   renderStoredLists();
-  enableNaturalHorizontalScroll();
+  enableHorizontalTouchScroll();
 });
